@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIニュースアプリ</title>
+    <style>
+        /* CSS */
+        /* 全体の背景やフォント設定 */
+        body { font-family: sans-serif; padding: 20px; background-color: #f0f2f5; }
+        h1 { color: #333; }
+        
+        /* カテゴリ選択プルダウンのデザイン */
+        select { padding: 10px; font-size: 16px; border-radius: 5px; margin-bottom: 20px;}
+
+        /* ニュース記事1つ分のカードデザイン */
+        .news-card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* 影をつける */
+        }
+        
+        /* タイトルリンクのデザイン */
+        .news-title { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+        .news-title a { text-decoration: none; color: #1a0dab; }
+        
+        /* 記事概要の文字色など */
+        .news-summary { font-size: 14px; color: #555; margin-bottom: 10px; }
+
+        /* AI生成タグのデザイン */
+        .tag {
+            background-color: #e8f0fe;
+            color: #1967d2;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-right: 5px;
+            font-weight: bold;
+        }
+
+        /* 読み込み中メッセージのデザイン (最初は非表示) */
+        #loading { display: none; font-weight: bold; color: #666; }
+    </style>
+</head>
+<body>
+
+    <h1>AIニュース一覧</h1>
+
+    <!-- ユーザーが操作するエリア -->
+    <label>カテゴリを選択: </label>
+    <select id="category-select">
+        <option value="economy">経済</option>
+        <option value="gourmet">グルメ</option>
+        <option value="health">健康</option>
+    </select>
+
+    <!-- 処理待ちの時に表示するメッセージ -->
+    <div id="loading">ニュースを読込み中です・・・</div>
+    
+    <!-- ここにニュースカードが追加されていきます -->
+    <div id="news-container"></div>
+
+    <!-- 画面を動かすプログラム (JavaScript) -->
+    <script>
+        // HTMLの要素を変数に入れて扱いやすくする
+        const select = document.getElementById('category-select');   // プルダウン
+        const container = document.getElementById('news-container'); // ニュース置き場
+        const loading = document.getElementById('loading');          // 読み込み中メッセージ
+
+        // イベント設定: カテゴリが変更されたら実行する
+        select.addEventListener('change', () => {
+            // 選択された値(economyなど)を使ってニュースを取りに行く
+            fetchNews(select.value);
+        });
+
+        // 画面を開いた瞬間に一度だけ実行 (最初は経済を表示)
+        fetchNews('economy');
+
+        /**
+         * Python(バックエンド)からニュースデータを取得して表示する関数
+         * @param {string} category - "economy", "gourmet", "health" のいずれか
+         */
+        async function fetchNews(category) {
+            // 表示のリセット
+            container.innerHTML = '';      // 前のニュースを消す
+            loading.style.display = 'block'; // 「読み込み中...」を表示する
+
+            try {
+                // Python (app.py) にデータを要求する
+                // fetch APIを使ってPOSTリクエストを送る
+                const response = await fetch('/api/news', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: category }) // どのカテゴリが欲しいか送る
+                });
+
+                // 3. 返ってきたデータ(JSON)を受け取る
+                const newsList = await response.json();
+
+                // 4. 受け取ったニュースの数だけループして画面を作る
+                newsList.forEach(news => {
+                    // カードの箱を作る
+                    const card = document.createElement('div');
+                    card.className = 'news-card';
+
+                    // タグのリストをHTMLタグ(<span class="tag">...</span>)に変換してつなげる
+                    const tagsHtml = news.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
+
+                    // カードの中身(HTML)を組み立てる
+                    card.innerHTML = `
+                        <div class="news-title">
+                            <a href="${news.link}" target="_blank">${news.title}</a>
+                        </div>
+                        <div class="news-summary">${news.summary}</div>
+                        <div>${tagsHtml}</div>
+                    `;
+                    
+                    // 完成したカードを画面に追加する
+                    container.appendChild(card);
+                });
+
+            } catch (error) {
+                // エラーが起きた場合 (通信失敗など)
+                console.error('Error:', error);
+                container.innerHTML = '<p>ニュースの取得に失敗しました。</p>';
+            } finally {
+                // 成功しても失敗しても、最後に「読み込み中」を消す
+                loading.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
