@@ -38,7 +38,7 @@ pip install flask feedparser google-generativeai
 *  app.py（または実行ファイル名）を開き、以下の部分にGemini APIキーを入力してください。
 
 app.py 
-GEMINI_API_KEY = "APIキー"
+*  GEMINI_API_KEY = "APIキー"
 
 3. アプリケーションの起動
 以下のコマンドでサーバーを起動します。
